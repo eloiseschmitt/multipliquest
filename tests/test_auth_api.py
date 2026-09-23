@@ -52,7 +52,8 @@ def csrf_client() -> APIClient:
 
 def set_csrf_cookie(client: APIClient) -> str:
     response = client.get("/api/auth/csrf/")
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert response.data["csrfToken"]
     return response.cookies["csrftoken"].value
 
 
@@ -133,7 +134,7 @@ def test_protected_api_rejects_anonymous_user() -> None:
 
 
 @pytest.mark.django_db
-def test_parent_can_create_child_account(parent_user) -> None:
+def test_child_account_creation_is_admin_only(parent_user) -> None:
     client = csrf_client()
     client.force_login(parent_user)
     csrf_token = set_csrf_cookie(client)
@@ -149,16 +150,12 @@ def test_parent_can_create_child_account(parent_user) -> None:
         HTTP_X_CSRFTOKEN=csrf_token,
     )
 
-    created = User.objects.get(username="newchild")
-    assert response.status_code == 201
-    assert response.data["username"] == "newchild"
-    assert response.data["role"] == User.Role.CHILD
-    assert created.parent == parent_user
-    assert created.check_password("NewChildPass123!")
+    assert response.status_code == 404
+    assert not User.objects.filter(username="newchild").exists()
 
 
 @pytest.mark.django_db
-def test_child_cannot_create_child_account(child_user) -> None:
+def test_child_create_endpoint_is_not_available_to_children(child_user) -> None:
     client = csrf_client()
     client.force_login(child_user)
     csrf_token = set_csrf_cookie(client)
@@ -170,7 +167,7 @@ def test_child_cannot_create_child_account(child_user) -> None:
         HTTP_X_CSRFTOKEN=csrf_token,
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 404
     assert not User.objects.filter(username="blocked").exists()
 
 
@@ -222,3 +219,10 @@ def test_login_attempts_are_limited(child_user, settings) -> None:
 
     assert blocked_response.status_code == 429
     assert blocked_response.data == {"detail": "Trop de tentatives. Réessaie dans quelques minutes."}
+
+
+def test_health_check_exposes_no_sensitive_data() -> None:
+    response = APIClient().get("/api/health/")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}

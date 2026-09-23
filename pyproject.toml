@@ -3,15 +3,19 @@ name = "multipliquest"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
+    "dj-database-url>=3.1.2",
     "django>=6.1.1",
     "django-cors-headers>=4.9.0",
     "django-stubs>=6.1.1",
     "djangorestframework>=3.18.1",
     "djangorestframework-stubs>=3.18.1",
+    "gunicorn>=26.2.0",
     "mypy>=2.3.1",
+    "psycopg[binary]>=3.3.6",
     "pytest>=9.1.1",
     "pytest-django>=4.14.0",
     "ruff>=0.16.8",
+    "whitenoise>=6.12.0",
 ]
 
 [tool.ruff]

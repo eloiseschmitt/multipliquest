@@ -1,3 +1,5 @@
+import { apiUrl } from "../config";
+
 export interface Progress {
   current_level: number;
   available_tables: number[];
@@ -66,11 +68,12 @@ function readCookie(name: string): string {
 }
 
 async function ensureCsrfCookie(): Promise<string> {
-  await fetch("/api/auth/csrf/", {
+  const response = await fetch(apiUrl("/api/auth/csrf/"), {
     method: "GET",
     credentials: "include"
   });
-  return readCookie("csrftoken");
+  const data = (await response.json()) as { csrfToken?: string };
+  return readCookie("csrftoken") || data.csrfToken || "";
 }
 
 async function requestJson<T>(input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
@@ -103,16 +106,16 @@ async function mutatingRequest<T>(input: RequestInfo | URL, init: RequestInit = 
 }
 
 export async function fetchProgress(): Promise<Progress> {
-  return requestJson<Progress>("/api/game/progress/");
+  return requestJson<Progress>(apiUrl("/api/game/progress/"));
 }
 
 export async function fetchActiveSession(): Promise<GameSession | null> {
-  const data = await requestJson<{ session: GameSession | null }>("/api/game/session/");
+  const data = await requestJson<{ session: GameSession | null }>(apiUrl("/api/game/session/"));
   return data.session;
 }
 
 export async function startSession(): Promise<GameSession> {
-  const data = await mutatingRequest<{ session: GameSession }>("/api/game/session/", {
+  const data = await mutatingRequest<{ session: GameSession }>(apiUrl("/api/game/session/"), {
     method: "POST",
     body: JSON.stringify({})
   });
@@ -120,7 +123,7 @@ export async function startSession(): Promise<GameSession> {
 }
 
 export async function submitAnswer(questionId: number, answer: number): Promise<AnswerResponse> {
-  return mutatingRequest<AnswerResponse>("/api/game/answer/", {
+  return mutatingRequest<AnswerResponse>(apiUrl("/api/game/answer/"), {
     method: "POST",
     body: JSON.stringify({ question_id: questionId, answer })
   });

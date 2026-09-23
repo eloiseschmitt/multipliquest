@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.contrib.auth import authenticate, password_validation
+from django.contrib.auth import authenticate
 from rest_framework import serializers
 
 from accounts.models import User
@@ -40,29 +40,3 @@ class LoginSerializer(serializers.Serializer[dict[str, object]]):
             )
         attrs["user"] = user
         return attrs
-
-
-class ChildCreateSerializer(serializers.ModelSerializer[User]):
-    password = serializers.CharField(max_length=256, min_length=8, write_only=True)
-
-    class Meta:
-        model = User
-        fields = ("id", "username", "display_name", "password", "role", "current_level", "total_xp")
-        read_only_fields = ("id", "role", "current_level", "total_xp")
-
-    def validate_password(self, value: str) -> str:
-        password_validation.validate_password(value)
-        return value
-
-    def create(self, validated_data: dict[str, object]) -> User:
-        parent = self.context["request"].user
-        password = str(validated_data.pop("password"))
-        user = User(
-            **validated_data,
-            role=User.Role.CHILD,
-            parent=parent,
-        )
-        user.set_password(password)
-        user.full_clean()
-        user.save()
-        return user

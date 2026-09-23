@@ -13,9 +13,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
-from accounts.permissions import IsParent
 from accounts.rate_limit import LoginRateLimiter
-from accounts.serializers import ChildCreateSerializer, LoginSerializer, UserSerializer
+from accounts.serializers import LoginSerializer, UserSerializer
 
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
@@ -24,8 +23,7 @@ class CsrfTokenView(APIView):
     authentication_classes: list[type] = []
 
     def get(self, request: Request) -> Response:
-        get_token(request)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"csrfToken": get_token(request)})
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -71,14 +69,3 @@ class MeView(APIView):
 
     def get(self, request: Request) -> Response:
         return Response({"user": UserSerializer(cast(User, request.user)).data})
-
-
-@method_decorator(csrf_protect, name="dispatch")
-class ChildCreateView(APIView):
-    permission_classes = [IsParent]
-
-    def post(self, request: Request) -> Response:
-        serializer = ChildCreateSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
-        child = serializer.save()
-        return Response(UserSerializer(child).data, status=status.HTTP_201_CREATED)

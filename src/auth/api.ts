@@ -1,4 +1,5 @@
 import type { ApiUser, AuthUser, UserResponse } from "./types";
+import { apiUrl } from "../config";
 
 const jsonHeaders = {
   "Content-Type": "application/json"
@@ -22,11 +23,12 @@ function mapUser(user: ApiUser): AuthUser {
 }
 
 async function ensureCsrfCookie(): Promise<string> {
-  await fetch("/api/auth/csrf/", {
+  const response = await fetch(apiUrl("/api/auth/csrf/"), {
     method: "GET",
     credentials: "include"
   });
-  return readCookie("csrftoken");
+  const data = (await response.json()) as { csrfToken?: string };
+  return readCookie("csrftoken") || data.csrfToken || "";
 }
 
 async function requestJson<T>(input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
@@ -67,12 +69,12 @@ async function mutatingRequest<T>(input: RequestInfo | URL, init: RequestInit = 
 }
 
 export async function fetchCurrentUser(): Promise<AuthUser> {
-  const data = await requestJson<UserResponse>("/api/auth/me/");
+  const data = await requestJson<UserResponse>(apiUrl("/api/auth/me/"));
   return mapUser(data.user);
 }
 
 export async function login(username: string, password: string): Promise<AuthUser> {
-  const data = await mutatingRequest<UserResponse>("/api/auth/login/", {
+  const data = await mutatingRequest<UserResponse>(apiUrl("/api/auth/login/"), {
     method: "POST",
     body: JSON.stringify({ username, password })
   });
@@ -80,7 +82,7 @@ export async function login(username: string, password: string): Promise<AuthUse
 }
 
 export async function logout(): Promise<void> {
-  await mutatingRequest<void>("/api/auth/logout/", {
+  await mutatingRequest<void>(apiUrl("/api/auth/logout/"), {
     method: "POST",
     body: JSON.stringify({})
   }).catch((error: unknown) => {
