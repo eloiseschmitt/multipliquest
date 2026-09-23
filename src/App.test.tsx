@@ -21,6 +21,34 @@ const childPayload = {
   }
 };
 
+const progressPayload = {
+  current_level: 1,
+  available_tables: [2, 3, 4],
+  newest_table: 4,
+  total_xp: 80,
+  best_score: 0,
+  global_success: false,
+  mastery_attempts: 0,
+  mastery_correct: 0,
+  mastery_evaluable: false,
+  mastery_success: false,
+  completed_sessions: 0
+};
+
+const activeSessionPayload = {
+  session: null
+};
+
+function gameResponse(url: string) {
+  if (url === "/api/game/progress/") {
+    return jsonResponse(progressPayload);
+  }
+  if (url === "/api/game/session/") {
+    return jsonResponse(activeSessionPayload);
+  }
+  return null;
+}
+
 describe("authentication flow", () => {
   beforeEach(() => {
     document.cookie = "csrftoken=test-csrf";
@@ -40,6 +68,10 @@ describe("authentication flow", () => {
       if (url === "/api/auth/login/") {
         return jsonResponse(childPayload);
       }
+      const gamePayload = gameResponse(url);
+      if (gamePayload) {
+        return gamePayload;
+      }
       return new Response(null, { status: 204 });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -53,6 +85,7 @@ describe("authentication flow", () => {
 
     expect(await screen.findByRole("heading", { name: "Bonjour Nina" })).toBeInTheDocument();
     expect(screen.getByText("80")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Jouer une série" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/auth/login/",
       expect.objectContaining({
@@ -96,6 +129,10 @@ describe("authentication flow", () => {
         if (url === "/api/auth/logout/") {
           return new Response(null, { status: 204 });
         }
+        const gamePayload = gameResponse(url);
+        if (gamePayload) {
+          return gamePayload;
+        }
         return new Response(null, { status: 204 });
       })
     );
@@ -106,6 +143,73 @@ describe("authentication flow", () => {
     await userEvent.click(screen.getByRole("button", { name: "Déconnexion" }));
 
     expect(await screen.findByRole("heading", { name: "Connexion joueur" })).toBeInTheDocument();
+  });
+
+  it("starts a game session and shows immediate correction", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+      if (url === "/api/auth/me/") {
+        return jsonResponse(childPayload);
+      }
+      if (url === "/api/game/progress/") {
+        return jsonResponse(progressPayload);
+      }
+      if (url === "/api/game/session/" && init?.method === "POST") {
+        return jsonResponse({
+          session: {
+            id: 10,
+            level: 1,
+            status: "ACTIVE",
+            total_questions: 20,
+            score: 0,
+            xp_awarded: 0,
+            unlocked_level: null,
+            answered_count: 0,
+            current_question: { id: 99, position: 1, table: 4, multiplier: 6 }
+          }
+        });
+      }
+      if (url === "/api/game/session/") {
+        return jsonResponse({ session: null });
+      }
+      if (url === "/api/game/answer/") {
+        return jsonResponse({
+          correction: {
+            id: 99,
+            position: 1,
+            table: 4,
+            multiplier: 6,
+            submitted_answer: 24,
+            is_correct: true,
+            correct_answer: 24
+          },
+          session: {
+            id: 10,
+            level: 1,
+            status: "ACTIVE",
+            total_questions: 20,
+            score: 0,
+            xp_awarded: 0,
+            unlocked_level: null,
+            answered_count: 1,
+            current_question: { id: 100, position: 2, table: 3, multiplier: 8 }
+          },
+          summary: null
+        });
+      }
+      return new Response(null, { status: 204 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Jouer une série" }));
+    expect(await screen.findByText("4 x 6 = ?")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Ta réponse"), "24");
+    await userEvent.click(screen.getByRole("button", { name: "Valider" }));
+
+    expect(await screen.findByText("Bravo, c'est correct.")).toBeInTheDocument();
+    expect(screen.getByText("3 x 8 = ?")).toBeInTheDocument();
   });
 
   it("redirects to login when the session is expired", async () => {
