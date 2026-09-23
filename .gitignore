@@ -1,2 +1,13 @@
 venv
 .idea
+.venv
+.env
+db.sqlite3
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+node_modules/
+dist/
+htmlcov/
+.coverage
