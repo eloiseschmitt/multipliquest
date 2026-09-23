@@ -32,11 +32,11 @@ Deliver features in small, independently testable increments. Do not implement s
 | 8 | 2–11 | 11 |
 | 9 | 2–12 | 12 |
 
-Multipliers range from **1 to 12**. Each session contains **exactly 20 questions**, with no time limit and a numeric free-text answer. At level 1, distribute questions across tables 2, 3 and 4. From level 2 onward, **at least 10 of 20 questions** must concern the newly unlocked table; draw the others from earlier tables, ensuring those tables continue to appear across sessions. Avoid immediate repetition where feasible. `3 × 4` and `4 × 3` may be distinct questions.
+Multipliers range from **1 to 12**. Each session contains **exactly 20 questions**, with no time limit and a numeric free-text answer. At level 1, distribute questions across tables 2, 3 and 4. From level 2 onward, **exactly 10 of 20 questions** must concern the newly unlocked table; draw the other 10 from earlier tables as evenly as possible, ensuring those tables continue to appear across sessions. Avoid immediate repetition where feasible. `3 × 4` and `4 × 3` may be distinct questions.
 
 ### Unlocking and mastery
 
-- **Level 1 → 2:** at least **19/20 correct in one completed level-1 session**.
+- **Level 1 → 2:** at least **19/20 correct in one completed level-1 session**; there is no additional table-4 mastery condition.
 - **Levels 2 → 9:** BOTH of the following must be true at the current level:
   1. At least **19/20 correct in one completed session** at that level. Once achieved, this condition remains satisfied for that level.
   2. At least **19/20 correct in the latest 20 attempts on the newly unlocked table**, drawn from **completed sessions at the current level**. Fewer than 20 eligible attempts means mastery is not yet evaluable. This is a rolling window, not a lifetime average.
@@ -94,7 +94,7 @@ For every business-rule change:
 Mandatory domain tests include:
 
 - Starting tables 2–4; correct level-to-table mapping through level 9; no table 13/level 10.
-- Exactly 20 questions; valid operands 1–12; at least 10 questions on the newest table from level 2; old tables remain eligible.
+- Exactly 20 questions; valid operands 1–12; exactly 10 questions on the newest table from level 2; old tables remain eligible.
 - Level 1: 18/20 does not unlock, 19/20 and 20/20 do.
 - Levels 2–9: global success alone does not unlock; mastery alone does not unlock; both together do, even across separate completed sessions.
 - Mastery: 19/20 succeeds, 18/20 fails, fewer than 20 eligible attempts fails; rolling window drops the oldest attempt; only completed sessions at the **current level** count.

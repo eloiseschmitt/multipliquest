@@ -55,7 +55,7 @@ Le niveau 9 constitue le niveau final : les exercices continuent de mélanger to
 
 À chaque niveau, les exercices doivent couvrir **toutes les tables débloquées**, et pas uniquement la dernière. La répartition doit permettre de réviser régulièrement les anciennes tables tout en pratiquant suffisamment la nouvelle.
 
-Pour le MVP, chaque session de 20 questions à partir du niveau 2 contient **au moins 10 questions de la dernière table débloquée**. Les questions restantes sont tirées des tables précédentes, qui doivent toutes continuer à apparaître au fil des sessions. Au niveau 1, répartir les questions entre les tables 2, 3 et 4. Éviter autant que possible les répétitions immédiates. La pondération de la nouvelle table permet d’atteindre rapidement les 20 tentatives nécessaires à l’évaluation de sa maîtrise.
+Pour le MVP, chaque session de 20 questions à partir du niveau 2 contient **10 questions sur la dernière table débloquée** et **10 questions sur les tables précédentes**, réparties aussi équitablement que possible. Au niveau 1, répartir les questions entre les tables 2, 3 et 4. Éviter autant que possible les répétitions immédiates. La pondération de la nouvelle table permet d’atteindre rapidement les 20 tentatives nécessaires à l’évaluation de sa maîtrise.
 
 Une multiplication déjà proposée dans l'ordre inverse, par exemple `3 × 4` et `4 × 3`, peut être présentée comme deux exercices distincts.
 
@@ -68,13 +68,13 @@ Une multiplication déjà proposée dans l'ordre inverse, par exemple `3 × 4` e
 1. **Réussite globale :** au moins **19 bonnes réponses sur les 20 questions d'une session complète** au niveau courant (95 %).
 2. **Maîtrise de la dernière table débloquée :** au moins **19 bonnes réponses sur les 20 dernières tentatives concernant cette table** (95 %). Ces tentatives peuvent provenir de plusieurs sessions terminées du niveau courant.
 
-Le niveau 1 est une exception : aucune nouvelle table n'a encore été débloquée. Une session de 19/20 sur les tables 2, 3 et 4 suffit donc pour accéder au niveau 2 et à la table de 5.
+Le niveau 1 est une exception : aucune nouvelle table n'a encore été débloquée. Une session complète de 19/20 sur les tables 2, 3 et 4 suffit donc pour accéder au niveau 2 et à la table de 5, sans condition supplémentaire sur la table de 4.
 
 **Exemple :** au niveau 2, une session à 19/20 sur les tables 2 à 5 ne suffit pas si le joueur a réussi seulement 17 de ses 20 dernières questions sur la table de 5. Il reste au niveau 2 et continue de s'entraîner. Lorsqu'il atteint 19/20 sur la table de 5, il doit aussi avoir réussi une session complète à 19/20 au niveau 2 pour débloquer la table de 6.
 
 ### 4.2. Fenêtre d'évaluation et sessions
 
-- Chaque session comporte **20 questions**, dont **au moins 10 sur la dernière table débloquée** à partir du niveau 2.
+- Chaque session comporte **20 questions**, dont **10 sur la dernière table débloquée** et **10 sur les anciennes tables** à partir du niveau 2.
 - Pour la maîtrise de la nouvelle table, on utilise une **fenêtre glissante de 20 tentatives** : dès qu'une nouvelle réponse est enregistrée, elle remplace la plus ancienne si la fenêtre en contient déjà 20.
 - Tant que le joueur n'a pas répondu à **20 questions de cette table au niveau courant**, la condition de maîtrise n'est pas évaluable et aucun déblocage n'est possible, même avec 100 % sur les premières tentatives.
 - La condition globale doit être satisfaite sur **une session complète du niveau courant**. Une session précédente à 95 % reste valable pour ce niveau : il n'est pas nécessaire de réussir les deux conditions lors de la même session.
@@ -189,7 +189,7 @@ Chaque fonctionnalité métier doit disposer de tests automatisés, notamment po
 - Au niveau 1, 18/20 ne débloque rien ; 19/20 ou 20/20 débloque la table de 5.
 - À partir du niveau 2, 19/20 sur une session **et** 19/20 sur les 20 dernières tentatives de la nouvelle table sont nécessaires pour débloquer la suivante.
 - Un score global de 95 % ne suffit pas si la dernière table n’est pas maîtrisée ; inversement, maîtriser la dernière table ne suffit pas sans session globale réussie.
-- Au moins 10 questions par session concernent la dernière table débloquée, tandis que les tables précédentes restent révisées.
+- À partir du niveau 2, 10 questions par session concernent la dernière table débloquée et 10 questions concernent les tables précédentes.
 - La maîtrise est calculée sur une fenêtre glissante de 20 tentatives issues de sessions terminées au niveau courant.
 - Chaque nouveau niveau conserve les tables précédentes dans les exercices.
 - Le joueur retrouve son niveau, ses XP et ses trophées après reconnexion.
