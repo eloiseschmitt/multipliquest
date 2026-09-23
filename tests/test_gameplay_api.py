@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
@@ -11,12 +13,12 @@ User = get_user_model()
 
 @pytest.fixture
 def player():
-    return User.objects.create_user(username="nina", password="pass", role=User.Role.CHILD)
+    return User.objects.create_user(username=f"player-{uuid4().hex}", password=None, role=User.Role.CHILD)
 
 
 @pytest.fixture
 def other_player():
-    return User.objects.create_user(username="lina", password="pass", role=User.Role.CHILD)
+    return User.objects.create_user(username=f"player-{uuid4().hex}", password=None, role=User.Role.CHILD)
 
 
 @pytest.mark.django_db

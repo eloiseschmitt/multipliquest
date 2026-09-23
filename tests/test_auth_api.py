@@ -1,11 +1,37 @@
 from __future__ import annotations
 
+from secrets import token_urlsafe
+from uuid import uuid4
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
 User = get_user_model()
+USERNAME_FIELD = User.USERNAME_FIELD
+PASSWORD_FIELD = "password"
+
+
+def unique_username(prefix: str) -> str:
+    return f"{prefix}-{uuid4().hex}"
+
+
+def auth_payload(username: str, password: str) -> dict[str, str]:
+    payload: dict[str, str] = {}
+    payload[USERNAME_FIELD] = username
+    payload[PASSWORD_FIELD] = password
+    return payload
+
+
+@pytest.fixture
+def parent_credentials() -> dict[str, str]:
+    return auth_payload(unique_username("parent"), token_urlsafe(24))
+
+
+@pytest.fixture
+def child_credentials() -> dict[str, str]:
+    return auth_payload(unique_username("child"), token_urlsafe(24))
 
 
 @pytest.fixture(autouse=True)
@@ -14,19 +40,19 @@ def clear_cache() -> None:
 
 
 @pytest.fixture
-def parent_user():
+def parent_user(parent_credentials):
     return User.objects.create_user(
-        username="parent1",
-        password="ParentPass123!",
+        username=parent_credentials[USERNAME_FIELD],
+        password=parent_credentials[PASSWORD_FIELD],
         role=User.Role.PARENT,
     )
 
 
 @pytest.fixture
-def child_user(parent_user):
+def child_user(parent_user, child_credentials):
     return User.objects.create_user(
-        username="child1",
-        password="ChildPass123!",
+        username=child_credentials[USERNAME_FIELD],
+        password=child_credentials[PASSWORD_FIELD],
         role=User.Role.CHILD,
         parent=parent_user,
         display_name="Nina",
@@ -36,8 +62,8 @@ def child_user(parent_user):
 @pytest.fixture
 def other_child(parent_user):
     return User.objects.create_user(
-        username="child2",
-        password="OtherPass123!",
+        username=unique_username("child"),
+        password=token_urlsafe(24),
         role=User.Role.CHILD,
         parent=parent_user,
         display_name="Lina",
@@ -57,19 +83,19 @@ def set_csrf_cookie(client: APIClient) -> str:
 
 
 @pytest.mark.django_db
-def test_login_with_valid_credentials_starts_session(child_user) -> None:
+def test_login_with_valid_credentials_starts_session(child_user, child_credentials) -> None:
     client = csrf_client()
     csrf_token = set_csrf_cookie(client)
 
     response = client.post(
         "/api/auth/login/",
-        {"username": "child1", "password": "ChildPass123!"},
+        child_credentials,
         format="json",
         HTTP_X_CSRFTOKEN=csrf_token,
     )
 
     assert response.status_code == 200
-    assert response.data["user"]["username"] == "child1"
+    assert response.data["user"]["username"] == child_user.username
     assert response.data["user"]["role"] == User.Role.CHILD
     assert "password" not in response.data["user"]
     assert "sessionid" in response.cookies
@@ -80,10 +106,11 @@ def test_login_with_valid_credentials_starts_session(child_user) -> None:
 def test_login_with_invalid_credentials_uses_generic_error(child_user) -> None:
     client = csrf_client()
     csrf_token = set_csrf_cookie(client)
+    credentials = auth_payload(unique_username("missing-user"), token_urlsafe(24))
 
     response = client.post(
         "/api/auth/login/",
-        {"username": "missing-user", "password": "wrong"},
+        credentials,
         format="json",
         HTTP_X_CSRFTOKEN=csrf_token,
     )
@@ -93,13 +120,13 @@ def test_login_with_invalid_credentials_uses_generic_error(child_user) -> None:
 
 
 @pytest.mark.django_db
-def test_login_requires_csrf_token(child_user) -> None:
+def test_login_requires_csrf_token(child_user, child_credentials) -> None:
     client = csrf_client()
     set_csrf_cookie(client)
 
     response = client.post(
         "/api/auth/login/",
-        {"username": "child1", "password": "ChildPass123!"},
+        child_credentials,
         format="json",
     )
 
@@ -107,12 +134,12 @@ def test_login_requires_csrf_token(child_user) -> None:
 
 
 @pytest.mark.django_db
-def test_logout_invalidates_session(child_user) -> None:
+def test_logout_invalidates_session(child_user, child_credentials) -> None:
     client = csrf_client()
     csrf_token = set_csrf_cookie(client)
     client.post(
         "/api/auth/login/",
-        {"username": "child1", "password": "ChildPass123!"},
+        child_credentials,
         format="json",
         HTTP_X_CSRFTOKEN=csrf_token,
     )
@@ -137,24 +164,24 @@ def test_parent_can_create_child_account(parent_user) -> None:
     client = csrf_client()
     client.force_login(parent_user)
     csrf_token = set_csrf_cookie(client)
+    child_password = token_urlsafe(24)
+    child_username = unique_username("new-child")
+    child_payload = auth_payload(child_username, child_password)
+    child_payload["display_name"] = "Malo"
 
     response = client.post(
         "/api/children/",
-        {
-            "username": "newchild",
-            "password": "NewChildPass123!",
-            "display_name": "Malo",
-        },
+        child_payload,
         format="json",
         HTTP_X_CSRFTOKEN=csrf_token,
     )
 
-    created = User.objects.get(username="newchild")
+    created = User.objects.get(username=child_username)
     assert response.status_code == 201
-    assert response.data["username"] == "newchild"
+    assert response.data["username"] == child_username
     assert response.data["role"] == User.Role.CHILD
     assert created.parent == parent_user
-    assert created.check_password("NewChildPass123!")
+    assert created.check_password(child_password)
 
 
 @pytest.mark.django_db
@@ -162,16 +189,18 @@ def test_child_cannot_create_child_account(child_user) -> None:
     client = csrf_client()
     client.force_login(child_user)
     csrf_token = set_csrf_cookie(client)
+    blocked_username = unique_username("blocked-child")
+    blocked_payload = auth_payload(blocked_username, token_urlsafe(24))
 
     response = client.post(
         "/api/children/",
-        {"username": "blocked", "password": "BlockedPass123!"},
+        blocked_payload,
         format="json",
         HTTP_X_CSRFTOKEN=csrf_token,
     )
 
     assert response.status_code == 403
-    assert not User.objects.filter(username="blocked").exists()
+    assert not User.objects.filter(username=blocked_username).exists()
 
 
 @pytest.mark.django_db
@@ -183,7 +212,7 @@ def test_user_cannot_access_another_players_progress(child_user, other_child) ->
     other_response = client.get(f"/api/progress/{other_child.id}/")
 
     assert own_response.status_code == 200
-    assert own_response.data["username"] == "child1"
+    assert own_response.data["username"] == child_user.username
     assert other_response.status_code == 404
 
 
@@ -199,15 +228,16 @@ def test_session_expiration_returns_forbidden(child_user) -> None:
 
 
 @pytest.mark.django_db
-def test_login_attempts_are_limited(child_user, settings) -> None:
+def test_login_attempts_are_limited(child_user, child_credentials, settings) -> None:
     settings.LOGIN_RATE_LIMIT_ATTEMPTS = 2
     client = csrf_client()
     csrf_token = set_csrf_cookie(client)
+    invalid_credentials = auth_payload(child_credentials[USERNAME_FIELD], token_urlsafe(24))
 
     for _ in range(2):
         response = client.post(
             "/api/auth/login/",
-            {"username": "child1", "password": "wrong"},
+            invalid_credentials,
             format="json",
             HTTP_X_CSRFTOKEN=csrf_token,
         )
@@ -215,7 +245,7 @@ def test_login_attempts_are_limited(child_user, settings) -> None:
 
     blocked_response = client.post(
         "/api/auth/login/",
-        {"username": "child1", "password": "ChildPass123!"},
+        child_credentials,
         format="json",
         HTTP_X_CSRFTOKEN=csrf_token,
     )
